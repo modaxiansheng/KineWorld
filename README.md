@@ -28,8 +28,8 @@ This repository releases the source components listed below, method figures, and
 
 ## Public artifacts
 
-- [KineWorld step-500 model repository](https://huggingface.co/pumpkin601/KineWorld): model card, paired action-normalization statistics, and public training configuration are available. The 13.1 GB Safetensors file is uploading.
-- [KineWorld video dataset repository](https://huggingface.co/datasets/pumpkin601/KineWorld-1000-Videos): dataset card is available. The archive of 1,000 MP4 videos is uploading.
+- [KineWorld step-500 model repository](https://huggingface.co/pumpkin601/KineWorld): complete Safetensors checkpoint, paired action-normalization statistics, public training configuration, and SHA-256 checksums.
+- [KineWorld video dataset repository](https://huggingface.co/datasets/pumpkin601/KineWorld-1000-Videos): archive of 1,000 MP4 videos, with archive size and SHA-256 recorded in the dataset card.
 
 ## Contents
 
