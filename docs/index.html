@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KineWorld: Action-Induced Transport Fields for Embodied World Modeling. Method figures, video samples, code, and release links.">
+  <title>KineWorld · Action-Induced Transport Fields</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="KineWorld home"><span class="brand-mark">K</span> KineWorld</a>
+      <nav aria-label="Main navigation">
+        <a href="#abstract">Abstract</a>
+        <a href="#method">Method</a>
+        <a href="#videos">Videos</a>
+        <a href="#materials">Materials</a>
+        <a href="#release">Release</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero container">
+      <div class="eyebrow"><span class="dot"></span> KineWorld project page</div>
+      <h1><span class="gradient-text">KineWorld</span><br>Action-Induced Transport Fields<br>for Embodied World Modeling</h1>
+      <p class="hero-subtitle">A transport-aware framework for predicting the visual consequences of robot actions.</p>
+      <div class="hero-actions">
+        <a class="button primary" href="#method">Explore the method <span aria-hidden="true">↗</span></a>
+        <a class="button secondary" href="#videos">Watch video samples</a>
+      </div>
+      <p class="hero-note">Explore the KineWorld method, selected video samples, and links to the public source and release repositories.</p>
+      <div class="hero-rail" aria-label="Method summary">
+        <div><strong>KTL</strong><span>Camera-aligned kinematic transport</span></div>
+        <div><strong>TAWD</strong><span>Transport-aware RGB supervision</span></div>
+        <div><strong>9 frames</strong><span>Over 32 control transitions</span></div>
+      </div>
+    </section>
+
+    <section id="abstract" class="section section-muted">
+      <div class="container section-grid">
+        <div class="section-label">01 / Abstract</div>
+        <div>
+          <h2>Learning where actions matter.</h2>
+          <p class="lead">Action-conditioned video models can emphasize large static regions while giving too little learning weight to small interaction-critical changes. KineWorld uses commanded robot motion to guide both the video condition and the spatial allocation of future-RGB supervision.</p>
+          <p>Kinematic Transport Lifting (KTL) constructs camera-aligned transport fields from a robot rollout. Transport-Aware World Diffusion (TAWD) calibrates the resulting motion support on the video latent grid and produces normalized token weights. The weighting branch changes training-time supervision without adding inference parameters or sampling steps.</p>
+          <p class="source-note">Method summary adapted from the KineWorld V4 manuscript. This page does not report numerical benchmark results.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="method" class="section">
+      <div class="container">
+        <div class="section-label">02 / Method</div>
+        <div class="section-heading">
+          <h2>From commanded motion<br>to targeted supervision.</h2>
+          <p>Two connected components turn robot kinematics into a video condition and a learning signal.</p>
+        </div>
+        <figure class="figure-card">
+          <img src="assets/kineworld_framework_v4.png" alt="V4 KineWorld framework showing kinematic transport lifting, dual-stream video generation, and transport-aware supervision." width="2188" height="1148">
+          <figcaption>Framework figure from the V4 manuscript. KTL constructs the transport condition; TAWD supplies training-only token weights.</figcaption>
+        </figure>
+        <div class="method-cards">
+          <article class="method-card">
+            <div class="card-index">A / KTL</div>
+            <h3>Kinematic Transport Lifting</h3>
+            <p>Roll out commanded robot actions, render robot-only frames and masks, then estimate image-plane displacement with RAFT. The visible-source mask restricts transport to robot pixels.</p>
+            <div class="card-tag">Action condition · training and inference</div>
+          </article>
+          <article class="method-card">
+            <div class="card-index">B / TAWD</div>
+            <h3>Transport-Aware World Diffusion</h3>
+            <p>Calibrate transport activity on the video latent grid, mix transport-focused and uniform distributions, and normalize weights to mean one for future-RGB flow matching.</p>
+            <div class="card-tag">Supervision allocation · training only</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="videos" class="section">
+      <div class="container">
+        <div class="section-label">03 / Video samples</div>
+        <div class="section-heading">
+          <h2>Robot interaction<br>in motion.</h2>
+          <p>Selected clips from the 1,000-video collection. The clips are presented as visual samples without attributing them to a specific checkpoint.</p>
+        </div>
+        <div class="video-grid">
+          <figure class="video-card">
+            <video controls playsinline preload="none" poster="assets/sample_001.png" aria-label="KineWorld video sample 001"><source src="assets/sample_001.mp4" type="video/mp4">Your browser does not support MP4 playback.</video>
+            <figcaption>Sample 001</figcaption>
+          </figure>
+          <figure class="video-card">
+            <video controls playsinline preload="none" poster="assets/sample_312.png" aria-label="KineWorld video sample 312"><source src="assets/sample_312.mp4" type="video/mp4">Your browser does not support MP4 playback.</video>
+            <figcaption>Sample 312</figcaption>
+          </figure>
+          <figure class="video-card">
+            <video controls playsinline preload="none" poster="assets/sample_1000.png" aria-label="KineWorld video sample 1000"><source src="assets/sample_1000.mp4" type="video/mp4">Your browser does not support MP4 playback.</video>
+            <figcaption>Sample 1000</figcaption>
+          </figure>
+        </div>
+        <p class="video-note">Browse the <a href="https://huggingface.co/datasets/pumpkin601/KineWorld-1000-Videos">video dataset repository ↗</a> for the full collection and its current availability.</p>
+      </div>
+    </section>
+
+    <section id="materials" class="section section-muted">
+      <div class="container section-grid">
+        <div class="section-label">04 / Materials</div>
+        <div>
+          <h2>Transport support in view.</h2>
+          <p>The V4 manuscript illustrates how rendered robot motion leads to camera-aligned transport and a calibrated spatial support map. The illustration below explains the construction; it is not an experimental measurement.</p>
+          <figure class="figure-card figure-small">
+            <img src="assets/transport_illustration.png" alt="Conceptual illustration of robot motion, image-plane transport, and transport support." loading="lazy">
+            <figcaption>Conceptual transport-support illustration from the V4 manuscript.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="release" class="section">
+      <div class="container">
+        <div class="section-label">05 / Release</div>
+        <div class="section-heading">
+          <h2>Research materials.</h2>
+          <p>Public repositories and the current availability of each artifact.</p>
+        </div>
+        <div class="release-grid">
+          <article><span class="release-type">Paper</span><h3>V4 manuscript</h3><p>The method figures and overview on this page are adapted from the current manuscript.</p><span class="status">Manuscript link pending</span></article>
+          <article><span class="release-type">Code + configs</span><h3><a href="https://github.com/pumpkin601/KineWorld">GitHub ↗</a></h3><p>Public source components and configuration examples. See the repository README for the included scope and setup.</p><span class="status">Available</span></article>
+          <article><span class="release-type">Weights</span><h3><a href="https://huggingface.co/pumpkin601/KineWorld">Hugging Face ↗</a></h3><p>Model card, checkpoint, and companion files. Check the model repository for current file availability.</p><span class="status">Model repository</span></article>
+          <article><span class="release-type">Videos</span><h3><a href="https://huggingface.co/datasets/pumpkin601/KineWorld-1000-Videos">Hugging Face ↗</a></h3><p>Three playable samples are above. Check the dataset repository for the full 1,000-video archive.</p><span class="status">Video repository</span></article>
+        </div>
+        <div class="release-note"><strong>Release scope:</strong> The public source, model repository, and video collection are separate artifacts. This page does not attribute manuscript scores or the sample videos to a particular released checkpoint.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner"><span>KineWorld · Action-Induced Transport Fields</span><span><a href="https://github.com/pumpkin601/KineWorld">Source on GitHub ↗</a></span></div>
+  </footer>
+</body>
+</html>

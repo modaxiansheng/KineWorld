@@ -2,9 +2,21 @@
 
 KineWorld is an action-conditioned world model built on the Wan2.2-TI2V-5B video backbone. The code includes an RGB/optical-flow dual-stream generator, an action-prediction module, RoboTwin data preparation and policy integration, and a WorldArena2 Track 1 video-generation pipeline.
 
+[**Project page: method figures and playable videos ↗**](https://pumpkin601.github.io/KineWorld/)
+
+![KineWorld method overview](docs/assets/kineworld_framework_v4.png)
+
+## Video samples
+
+Three clips from the provided 1,000-video collection can be played on the [project page](https://pumpkin601.github.io/KineWorld/#videos). Their source checkpoint is not specified here.
+
+| Sample 001 | Sample 312 | Sample 1000 |
+| --- | --- | --- |
+| [![Video sample 001](docs/assets/sample_001.png)](https://pumpkin601.github.io/KineWorld/#videos) | [![Video sample 312](docs/assets/sample_312.png)](https://pumpkin601.github.io/KineWorld/#videos) | [![Video sample 1000](docs/assets/sample_1000.png)](https://pumpkin601.github.io/KineWorld/#videos) |
+
 ## Release status
 
-This repository releases the source components listed below. It is not a complete reproduction package for the V4 manuscript. It contains no model weights, training data, generated videos, or measured benchmark results. A checkpoint is required for inference. The step-500 checkpoint has not been shown to reproduce the V4 manuscript results. A source checkout or a dry run does not verify model quality.
+This repository releases the source components listed below, method figures, and three video samples. It is not a complete reproduction package for the V4 manuscript. It contains no model weights, training data, or measured benchmark results. A checkpoint is required for inference. The step-500 checkpoint has not been shown to reproduce the V4 manuscript results. A source checkout or a dry run does not verify model quality.
 
 ## Public artifacts
 

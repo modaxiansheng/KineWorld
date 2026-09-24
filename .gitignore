@@ -25,6 +25,7 @@ develop-eggs/
 *.mov
 *.mkv
 *.webm
+!docs/assets/*.mp4
 
 # ===== Data files =====
 *.npy
