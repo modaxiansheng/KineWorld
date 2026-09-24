@@ -1,0 +1,26 @@
+# Install torch / torchvision separately for your CUDA version first.
+# See the README "Environment" section.
+transformers
+huggingface_hub
+imageio
+imageio[ffmpeg]
+pillow
+regex
+safetensors
+einops
+sentencepiece
+protobuf
+modelscope
+ftfy
+pynvml
+accelerate
+peft
+opencv-python
+h5py
+pyyaml
+tqdm
+pandas
+swanlab
+websockets
+msgpack
+numpy<2

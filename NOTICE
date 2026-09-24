@@ -1,0 +1,16 @@
+KineWorld source release candidate
+
+The diffsynth components include code adapted from DiffSynth-Studio by the
+ModelScope community: https://github.com/modelscope/DiffSynth-Studio
+DiffSynth-Studio is distributed under the Apache License, Version 2.0.
+The upstream license identifies Zhongjie Duan in its copyright notice.
+The root LICENSE includes the Apache License text. Modified model and pipeline
+files remain attributed to their original project and contributors.
+
+The robot-only rendering integration in data_generation/ is adapted from the
+RoboTwin interface and renderer:
+https://github.com/RoboTwin-Platform/RoboTwin
+RoboTwin's MIT license is included at third_party_licenses/RoboTwin-LICENSE.
+
+Wan2.2-TI2V-5B and Wan2.1 tokenizer weights are external model assets. They
+are not distributed in this source repository.

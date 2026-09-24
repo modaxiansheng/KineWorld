@@ -1,0 +1,70 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+.installed.cfg
+build/
+dist/
+develop-eggs/
+.eggs/
+
+# ===== Model weights / checkpoints =====
+*.safetensors
+*.partial
+*.pth
+*.ckpt
+*.bin
+*.pt
+
+# ===== Videos =====
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# ===== Data files =====
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.zarr
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# ===== Logs =====
+swanlog/
+wandb/
+*.log
+
+# ===== OS / IDE =====
+.DS_Store
+.vscode/
+.cursor/
+
+# ===== Environments =====
+.env
+.env.*
+*.pem
+*.key
+.venv
+env/
+venv/
+
+# ===== Model / output directories =====
+training/models/
+inference/models/
+inference/robotwin_policy/eval_result/
+
+temp/
+/models/
+checkpoints/
+outputs/
+runs/

@@ -1,0 +1,26 @@
+# Basic experiment configuration (kept for the RoboTwin eval framework).
+policy_name: null
+task_name: null
+task_config: null
+ckpt_setting: null
+seed: null
+instruction_type: unseen
+
+# KineWorld inference-server connection.
+server_host: "127.0.0.1"
+server_port: 8000
+
+# Total actions returned per server call. Layout (single-frame I2V):
+#   action[0]           = GT anchor (current qpos, skipped client-side)
+#   action[1 : chunk]   = future actions to execute
+# Set >= 1 + EXECUTE_WINDOW and <= the server's num_frames.
+action_chunk_size: 26
+
+# Cross-fade window for chunk-overlap blending. 0 = disabled.
+overlap: 0
+
+# Skip the ray-traced get_obs() between consecutive actions inside one replan
+# window. The model only consumes the observation cached at the end of the
+# previous chunk, so intermediate renders are wasted. Set false for a
+# full-FPS eval video.
+skip_get_obs_within_replan: true
