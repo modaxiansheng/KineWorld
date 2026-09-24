@@ -14,6 +14,14 @@ Three clips from the provided 1,000-video collection can be played on the [proje
 | --- | --- | --- |
 | [![Video sample 001](docs/assets/sample_001.png)](https://pumpkin601.github.io/KineWorld/#videos) | [![Video sample 312](docs/assets/sample_312.png)](https://pumpkin601.github.io/KineWorld/#videos) | [![Video sample 1000](docs/assets/sample_1000.png)](https://pumpkin601.github.io/KineWorld/#videos) |
 
+## More manuscript figures
+
+The [project page](https://pumpkin601.github.io/KineWorld/) includes the full figure gallery and analytical TAWD illustrations. The transport-support panel is conceptual; the rollout panel is a retained qualitative example, not a benchmark result.
+
+![Conceptual KineWorld transport support](docs/assets/transport_illustration.png)
+
+![Qualitative rollout comparison from the manuscript](docs/assets/qualitative_comparison.jpg)
+
 ## Release status
 
 This repository releases the source components listed below, method figures, and three video samples. It is not a complete reproduction package for the V4 manuscript. It contains no model weights, training data, or measured benchmark results. A checkpoint is required for inference. The step-500 checkpoint has not been shown to reproduce the V4 manuscript results. A source checkout or a dry run does not verify model quality.
