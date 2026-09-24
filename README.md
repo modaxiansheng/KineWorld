@@ -16,7 +16,7 @@ Three clips from the provided 1,000-video collection can be played on the [proje
 
 ## More manuscript figures
 
-The [project page](https://pumpkin601.github.io/KineWorld/) includes the full figure gallery and analytical TAWD illustrations. The transport-support panel is conceptual; the rollout panel is a retained qualitative example, not a benchmark result.
+The [project page](https://pumpkin601.github.io/KineWorld/) includes the framework and transport figures, analytical TAWD illustrations, 15 additional single-view rollout pairs, and three multi-view validation plates from the V4 manuscript. The transport-support panel is conceptual; the rollout panels are qualitative examples, not benchmark results.
 
 ![Conceptual KineWorld transport support](docs/assets/transport_illustration.png)
 

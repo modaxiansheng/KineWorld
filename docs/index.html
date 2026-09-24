@@ -16,7 +16,8 @@
       <a class="brand" href="#top" aria-label="KineWorld home"><span class="brand-mark">K</span><span>KineWorld</span></a>
       <nav aria-label="Main navigation">
         <a href="#method">Method</a>
-        <a href="#gallery">Gallery</a>
+        <a href="#qualitative">Rollouts</a>
+        <a href="#multiview">Multi-view</a>
         <a href="#videos">Videos</a>
         <a href="#resources">Resources</a>
       </nav>
@@ -38,8 +39,8 @@
           <p class="hero-footnote">Manuscript figures and selected video samples. See the linked repositories for current artifact availability.</p>
         </div>
         <div class="hero-media" aria-label="Selected KineWorld video frames">
-          <figure class="hero-shot hero-shot-main"><img src="assets/sample_312.png" alt="Robot arm interacting with objects on a tabletop" width="640" height="480"><figcaption>Selected video frame <span>312 / 1000</span></figcaption></figure>
-          <figure class="hero-shot hero-shot-inset"><img src="assets/sample_001.png" alt="Robot gripper above a red tabletop object" width="640" height="480"><figcaption>Sample 001</figcaption></figure>
+          <figure class="hero-shot hero-shot-main"><img src="assets/sample_312.png" width="640" height="480" alt="Robot arm interacting with objects on a tabletop"><figcaption>Selected video frame <span>312 / 1000</span></figcaption></figure>
+          <figure class="hero-shot hero-shot-inset"><img src="assets/sample_001.png" width="640" height="480" alt="Robot gripper above a red tabletop object"><figcaption>Sample 001</figcaption></figure>
           <div class="hero-corner" aria-hidden="true">K / W</div>
         </div>
       </div>
@@ -54,11 +55,11 @@
       <div class="container">
         <div class="section-top"><span class="section-kicker">Visual gallery / 01</span><h2>See the interaction.</h2><p>Frames selected from the supplied 1,000-video collection. They are visual samples; their source checkpoint is not specified here.</p></div>
         <div class="frame-gallery">
-          <figure><img src="assets/sample_001.png" alt="Robot gripper over a red object" loading="lazy"><figcaption>Sample 001</figcaption></figure>
-          <figure><img src="assets/sample_128.png" alt="Robot gripper near a blue block" loading="lazy"><figcaption>Sample 128</figcaption></figure>
-          <figure><img src="assets/sample_312.png" alt="Robot arm over a tabletop scene" loading="lazy"><figcaption>Sample 312</figcaption></figure>
-          <figure><img src="assets/sample_768.png" alt="Robot arm over a red tabletop block" loading="lazy"><figcaption>Sample 768</figcaption></figure>
-          <figure><img src="assets/sample_1000.png" alt="Robot gripper above two blue bowls" loading="lazy"><figcaption>Sample 1000</figcaption></figure>
+          <figure><img src="assets/sample_001.png" width="640" height="480" alt="Robot gripper over a red object" loading="lazy"><figcaption>Sample 001</figcaption></figure>
+          <figure><img src="assets/sample_128.png" width="640" height="480" alt="Robot gripper near a blue block" loading="lazy"><figcaption>Sample 128</figcaption></figure>
+          <figure><img src="assets/sample_312.png" width="640" height="480" alt="Robot arm over a tabletop scene" loading="lazy"><figcaption>Sample 312</figcaption></figure>
+          <figure><img src="assets/sample_768.png" width="640" height="480" alt="Robot arm over a red tabletop block" loading="lazy"><figcaption>Sample 768</figcaption></figure>
+          <figure><img src="assets/sample_1000.png" width="640" height="480" alt="Robot gripper above two blue bowls" loading="lazy"><figcaption>Sample 1000</figcaption></figure>
         </div>
       </div>
     </section>
@@ -74,13 +75,14 @@
           <article><span class="card-number">01 / KTL</span><h3>Kinematic Transport Lifting</h3><p>Robot-only renderings and masks support camera-aligned image-plane transport from commanded actions. The resulting field conditions future video generation.</p><span class="card-footer">Conditioning · training and inference</span></article>
           <article><span class="card-number">02 / TAWD</span><h3>Transport-Aware World Diffusion</h3><p>Transport support is calibrated on the video latent grid and converted to normalized token weights for future-RGB supervision.</p><span class="card-footer">Loss weighting · training only</span></article>
         </div>
+        <div class="pipeline-detail"><div><span class="plate-number">Appendix figure A1</span><h3>A closer look at the pipeline.</h3><p>Actions drive robot renderings, transport provides a camera-aligned condition, and the resulting support changes the allocation of future-RGB training loss. The 3D field in this drawing is schematic; KTL estimates image-plane transport with RAFT between rendered robot states.</p></div><a class="figure-panel" href="assets/pipeline_detail.png" target="_blank" rel="noopener" aria-label="Open the detailed conceptual pipeline figure"><img src="assets/pipeline_detail.png" width="2077" height="445" alt="Conceptual KineWorld pipeline with input rendering, transport lifting, and transport-aware weighting" loading="lazy"><span class="figure-caption"><b>Appendix figure A1</b> Detailed conceptual pipeline <span>Open full size ↗</span></span></a></div>
       </div>
     </section>
 
     <section class="section transport-section">
       <div class="container transport-grid">
         <div class="transport-copy"><span class="section-kicker">Camera-aligned transport / 03</span><h2>Follow the action through the image.</h2><p>The manuscript illustration connects robot motion, image-plane transport, and the support used by the training objective. It is a conceptual visualization, not a measured rollout.</p><a class="text-link" href="assets/transport_illustration.png" target="_blank" rel="noopener">Open figure at full size ↗</a></div>
-        <figure class="transport-figure"><img src="assets/transport_illustration.png" alt="Conceptual transport support construction across two robot manipulation scenes" loading="lazy"><figcaption>Figure 02 · Transport-support illustration from the V4 manuscript.</figcaption></figure>
+        <figure class="transport-figure"><img src="assets/transport_illustration.png" width="1448" height="1086" alt="Conceptual transport support construction across two robot manipulation scenes" loading="lazy"><figcaption>Figure 02 · Transport-support illustration from the V4 manuscript.</figcaption></figure>
       </div>
     </section>
 
@@ -88,22 +90,68 @@
       <div class="container">
         <div class="section-top"><span class="section-kicker">Training signal / 04</span><h2>Allocate attention where actions matter.</h2><p>The paper's analytical plots illustrate how a constructed transport support changes token-weight allocation. These curves are illustrative, not measured training statistics.</p></div>
         <div class="chart-grid">
-          <a class="chart-card" href="assets/tawd_token_weights.png" target="_blank" rel="noopener"><span class="chart-label">Figure 03 / Token weights</span><img src="assets/tawd_token_weights.png" alt="Analytical per-token TAWD weight versus uniform weighting" loading="lazy"><span>Transport-weight distribution <b>↗</b></span></a>
-          <a class="chart-card" href="assets/tawd_cumulative_weight.png" target="_blank" rel="noopener"><span class="chart-label">Figure 04 / Cumulative share</span><img src="assets/tawd_cumulative_weight.png" alt="Analytical cumulative token-weight share compared with uniform weighting" loading="lazy"><span>Cumulative supervision allocation <b>↗</b></span></a>
+          <a class="chart-card" href="assets/tawd_token_weights.png" target="_blank" rel="noopener"><span class="chart-label">Figure 03 / Token weights</span><img src="assets/tawd_token_weights.png" width="591" height="411" alt="Analytical per-token TAWD weight versus uniform weighting" loading="lazy"><span>Transport-weight distribution <b>↗</b></span></a>
+          <a class="chart-card" href="assets/tawd_cumulative_weight.png" target="_blank" rel="noopener"><span class="chart-label">Figure 04 / Cumulative share</span><img src="assets/tawd_cumulative_weight.png" width="591" height="411" alt="Analytical cumulative token-weight share compared with uniform weighting" loading="lazy"><span>Cumulative supervision allocation <b>↗</b></span></a>
         </div>
       </div>
     </section>
 
-    <section class="section comparison-section">
+    <section id="qualitative" class="section comparison-section">
       <div class="container">
         <div class="section-top"><span class="section-kicker">From the manuscript / 05</span><h2>A qualitative rollout view.</h2><p>A retained manuscript figure places a Wan2.2 example and a KineWorld example side by side at sampled times. This visual comparison does not establish a benchmark score or identify the source of the video samples on this page.</p></div>
-        <a class="figure-panel" href="assets/qualitative_comparison.jpg" target="_blank" rel="noopener" aria-label="Open the full qualitative rollout comparison"><img src="assets/qualitative_comparison.jpg" alt="Manuscript qualitative rollout comparison at input and five future time points" loading="lazy"><span class="figure-caption"><b>Figure 05</b> Retained qualitative comparison from the V4 manuscript <span>Open full size ↗</span></span></a>
+        <a class="figure-panel" href="assets/qualitative_comparison.jpg" target="_blank" rel="noopener" aria-label="Open the full qualitative rollout comparison"><img src="assets/qualitative_comparison.jpg" width="4045" height="1224" alt="Manuscript qualitative rollout comparison at input and five future time points" loading="lazy"><span class="figure-caption"><b>Figure 05</b> Retained qualitative comparison from the V4 manuscript <span>Open full size ↗</span></span></a>
+      </div>
+    </section>
+
+    <section class="section atlas-section">
+      <div class="container">
+        <div class="section-top"><span class="section-kicker">Appendix gallery / 06</span><h2>Fifteen more rollouts, frame by frame.</h2><p>The V4 appendix collects 15 single-view episode pairs across three plates. Each pair starts with the decoded input and follows with five sampled future frames, allowing the scene, robot, and objects to be inspected through time.</p></div>
+        <div class="reading-guide" aria-label="How to read the rollout plates">
+          <div><span>Read the rows</span><strong>Wan2.2 above, KineWorld below</strong></div>
+          <div><span>Read the columns</span><strong>Input, then five future frames</strong></div>
+          <div><span>Interpretation</span><strong>Visual examples, not a matched ablation</strong></div>
+        </div>
+        <article class="atlas-feature">
+          <div class="atlas-copy"><span class="plate-number">Plate 01 / 03</span><h3>Objects on the table.</h3><p>Episodes 45, 125, 212, 300, and 336 range from simple block layouts to food-handling scenes. Follow the robot's appearance and the position of objects across each six-frame row.</p><p class="atlas-note">The appendix describes visible rollout behavior; a few examples cannot establish task completion or trajectory accuracy.</p><a href="assets/appendix_rollouts_1.jpg" target="_blank" rel="noopener">Open the full plate ↗</a></div>
+          <a class="atlas-image" href="assets/appendix_rollouts_1.jpg" target="_blank" rel="noopener" aria-label="Open appendix rollout comparison plate one"><img src="assets/appendix_rollouts_1.jpg" alt="Wan2.2 and KineWorld future-frame comparisons for episodes 45, 125, 212, 300, and 336" loading="lazy" decoding="async" width="1198" height="1900"><span>Episodes 45 · 125 · 212 · 300 · 336</span></a>
+        </article>
+        <article class="atlas-feature">
+          <div class="atlas-copy"><span class="plate-number">Plate 02 / 03</span><h3>Changing scenes, changing objects.</h3><p>Episodes 391, 488, 586, 704, and 732 include sparse white tabletops and textured workspaces. Compare what moves, what stays in view, and whether the robot setting remains consistent.</p><p class="atlas-note">Frames are sampled from each encoded video; the display is a qualitative sequence, not a controlled component comparison.</p><a href="assets/appendix_rollouts_2.jpg" target="_blank" rel="noopener">Open the full plate ↗</a></div>
+          <a class="atlas-image" href="assets/appendix_rollouts_2.jpg" target="_blank" rel="noopener" aria-label="Open appendix rollout comparison plate two"><img src="assets/appendix_rollouts_2.jpg" alt="Wan2.2 and KineWorld future-frame comparisons for episodes 391, 488, 586, 704, and 732" loading="lazy" decoding="async" width="1198" height="1900"><span>Episodes 391 · 488 · 586 · 704 · 732</span></a>
+        </article>
+        <article class="atlas-feature">
+          <div class="atlas-copy"><span class="plate-number">Plate 03 / 03</span><h3>Across interaction types.</h3><p>Episodes 780, 865, 938, 976, and 982 show several different object arrangements and tasks. Look across the five future frames for changes in robot embodiment, object identity, and scene composition.</p><p class="atlas-note">These are retained manuscript examples. They are separate from the three playable videos on this page and are not attributed to the public step-500 checkpoint.</p><a href="assets/appendix_rollouts_3.jpg" target="_blank" rel="noopener">Open the full plate ↗</a></div>
+          <a class="atlas-image" href="assets/appendix_rollouts_3.jpg" target="_blank" rel="noopener" aria-label="Open appendix rollout comparison plate three"><img src="assets/appendix_rollouts_3.jpg" alt="Wan2.2 and KineWorld future-frame comparisons for episodes 780, 865, 938, 976, and 982" loading="lazy" decoding="async" width="1198" height="1900"><span>Episodes 780 · 865 · 938 · 976 · 982</span></a>
+        </article>
+      </div>
+    </section>
+
+    <section id="multiview" class="section multiview-section">
+      <div class="container">
+        <div class="section-top"><span class="section-kicker">Three-camera validation / 07</span><h2>One event. Three camera views.</h2><p>These V4 appendix plates compare reference and generated frames at eleven shared frame indices. Each plate places the left wrist, head, and right wrist views side by side, exposing where a rollout agrees across views and where it diverges.</p></div>
+        <div class="reading-guide multiview-guide" aria-label="How to read the multi-view plates">
+          <div><span>Across columns</span><strong>Left wrist · head · right wrist</strong></div>
+          <div><span>Within each cell</span><strong>Reference at left, KineWorld at right</strong></div>
+          <div><span>Across rows</span><strong>Eleven shared frame indices</strong></div>
+        </div>
+        <article class="multiview-feature">
+          <div class="multiview-copy"><span class="plate-number">Episode 001 / Bottle</span><h3>Follow a bottle lift.</h3><p>Compare the bottle's position during the reference lift with the generated head and left-wrist views. The plate makes differences in close-up object visibility easy to inspect.</p><p class="atlas-note">Validation diagnostic from the manuscript; not a scored multi-view test result.</p><a href="assets/multiview_episode_1.jpg" target="_blank" rel="noopener">Open all eleven rows ↗</a></div>
+          <a class="multiview-image" href="assets/multiview_episode_1.jpg" target="_blank" rel="noopener" aria-label="Open multi-view bottle manipulation plate"><img src="assets/multiview_episode_1.jpg" alt="Reference and KineWorld bottle manipulation frames across left wrist, head, and right wrist cameras" loading="lazy" decoding="async" width="1640" height="2494"><span>Bottle manipulation · episode 1</span></a>
+        </article>
+        <article class="multiview-feature">
+          <div class="multiview-copy"><span class="plate-number">Episode 050 / Placement</span><h3>Compare the tray and wrists.</h3><p>Follow the food-placement sequence in all three views. The tray contents and wrist-camera detail give concrete places to inspect differences between reference and generated frames.</p><p class="atlas-note">The views are synchronized for visual inspection; this is separate from the paper's scored test outputs.</p><a href="assets/multiview_episode_50.jpg" target="_blank" rel="noopener">Open all eleven rows ↗</a></div>
+          <a class="multiview-image" href="assets/multiview_episode_50.jpg" target="_blank" rel="noopener" aria-label="Open multi-view food placement plate"><img src="assets/multiview_episode_50.jpg" alt="Reference and KineWorld food-placement frames across left wrist, head, and right wrist cameras" loading="lazy" decoding="async" width="1640" height="2494"><span>Food placement · episode 50</span></a>
+        </article>
+        <article class="multiview-feature">
+          <div class="multiview-copy"><span class="plate-number">Episode 100 / Switch</span><h3>Watch the event timing.</h3><p>Compare when motion appears in the head view and how objects enter the right-wrist view. The static left-wrist scene provides a useful contrast within the same episode.</p><p class="atlas-note">A stable background alone is not evidence that object transport agrees across cameras.</p><a href="assets/multiview_episode_100.jpg" target="_blank" rel="noopener">Open all eleven rows ↗</a></div>
+          <a class="multiview-image" href="assets/multiview_episode_100.jpg" target="_blank" rel="noopener" aria-label="Open multi-view switch interaction plate"><img src="assets/multiview_episode_100.jpg" alt="Reference and KineWorld switch-interaction frames across left wrist, head, and right wrist cameras" loading="lazy" decoding="async" width="1640" height="2494"><span>Switch interaction · episode 100</span></a>
+        </article>
       </div>
     </section>
 
     <section id="videos" class="section video-section">
       <div class="container">
-        <div class="section-top"><span class="section-kicker">Watch / 06</span><h2>Video samples in motion.</h2><p>Three playable clips from the supplied collection. The complete 1,000-video archive has a separate <a href="https://huggingface.co/datasets/pumpkin601/KineWorld-1000-Videos">dataset repository ↗</a>.</p></div>
+        <div class="section-top"><span class="section-kicker">Watch / 08</span><h2>Video samples in motion.</h2><p>Three playable clips from the supplied collection. The complete 1,000-video archive has a separate <a href="https://huggingface.co/datasets/pumpkin601/KineWorld-1000-Videos">dataset repository ↗</a>.</p></div>
         <div class="video-grid">
           <figure class="video-card"><video controls playsinline preload="none" poster="assets/sample_001.png" aria-label="KineWorld sample video 001"><source src="assets/sample_001.mp4" type="video/mp4">Your browser does not support MP4 playback.</video><figcaption><span>01 / 03</span> Sample 001</figcaption></figure>
           <figure class="video-card"><video controls playsinline preload="none" poster="assets/sample_312.png" aria-label="KineWorld sample video 312"><source src="assets/sample_312.mp4" type="video/mp4">Your browser does not support MP4 playback.</video><figcaption><span>02 / 03</span> Sample 312</figcaption></figure>
@@ -113,7 +161,7 @@
     </section>
 
     <section id="resources" class="section resources-section">
-      <div class="container"><div class="section-top"><span class="section-kicker">Explore / 07</span><h2>Project resources.</h2><p>Code, model files, and the video collection are published separately. Check each repository for current file availability.</p></div>
+      <div class="container"><div class="section-top"><span class="section-kicker">Explore / 09</span><h2>Project resources.</h2><p>Code, model files, and the video collection are published separately. Check each repository for current file availability.</p></div>
         <div class="resource-grid">
           <a href="https://github.com/pumpkin601/KineWorld"><span>01 / Source</span><h3>Code + configurations</h3><p>Public source components, setup instructions, and examples.</p><b aria-hidden="true">↗</b></a>
           <a href="https://huggingface.co/pumpkin601/KineWorld"><span>02 / Model</span><h3>Checkpoint repository</h3><p>Model card, checkpoint, and companion files.</p><b aria-hidden="true">↗</b></a>
