@@ -8,7 +8,8 @@
   <meta property="og:description" content="Method figures, qualitative examples, and robot interaction videos from KineWorld.">
   <meta property="og:image" content="https://modaxiansheng.github.io/KineWorld/assets/kineworld_framework_v4.png">
   <title>KineWorld · Action-Induced Transport Fields</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
+  <script src="citation.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -20,6 +21,7 @@
         <a href="#multiview">Multi-view</a>
         <a href="#videos">Videos</a>
         <a href="#resources">Resources</a>
+        <a href="#bibtex">BibTeX</a>
       </nav>
       <a class="header-link" href="https://github.com/modaxiansheng/KineWorld">GitHub <span aria-hidden="true">↗</span></a>
     </div>
@@ -31,6 +33,29 @@
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-line"></span> Embodied world modeling</div>
           <h1>KineWorld<span>Action-Induced Transport Fields for Embodied World Modeling</span></h1>
+          <div class="paper-authors" aria-label="Authors and affiliations">
+            <ul class="author-list" aria-label="Authors">
+              <li>Ziying Song<sup>1,*</sup></li>
+              <li>Yuchen Liu<sup>2,*</sup></li>
+              <li>Zhuoran Xu<sup>3,*</sup></li>
+              <li>Ziyang Liu<sup>4</sup></li>
+              <li>Jian Jin<sup>5</sup></li>
+              <li>Jiangtao Su<sup>1</sup></li>
+              <li>Haibao Yu<sup>6</sup></li>
+              <li>Lei Yang<sup>1,†</sup></li>
+              <li>Yuanpei Chen<sup>7,‡</sup></li>
+            </ul>
+            <ul class="affiliation-list" aria-label="Affiliations">
+              <li><sup>1</sup> Nanyang Technological University</li>
+              <li><sup>2</sup> North University of China</li>
+              <li><sup>3</sup> psibot. Inc</li>
+              <li><sup>4</sup> Tsinghua University</li>
+              <li><sup>5</sup> China Academy of Information and Communications Technology</li>
+              <li><sup>6</sup> University of Hong Kong</li>
+              <li><sup>7</sup> Peking University</li>
+            </ul>
+            <p class="author-roles"><span><sup>*</sup> Co-first authors</span><span><sup>†</sup> Corresponding author</span><span><sup>‡</sup> Project lead</span></p>
+          </div>
           <p class="hero-subtitle">Predicting the visual consequences of robot actions with camera-aligned motion and transport-aware training.</p>
           <div class="hero-actions">
             <a class="button primary" href="#videos">Watch the videos <span aria-hidden="true">↗</span></a>
@@ -168,6 +193,25 @@
           <a href="https://huggingface.co/datasets/pumpkin601/KineWorld-1000-Videos"><span>03 / Dataset</span><h3>1,000-video collection</h3><p>Dataset card and full video archive.</p><b aria-hidden="true">↗</b></a>
         </div>
         <p class="scope-note">The public source and released artifacts are separate from the full V4 experimental setup. This page makes no numerical benchmark claim or checkpoint attribution for the sample videos. A public manuscript link will be added when available.</p>
+      </div>
+    </section>
+    <section id="bibtex" class="section citation-section" aria-labelledby="citation-title">
+      <div class="container">
+        <div class="citation-heading">
+          <div class="section-top"><span class="section-kicker">Cite / 10</span><h2 id="citation-title">BibTeX.</h2><p>If you find KineWorld useful, please cite our work.</p></div>
+          <div class="citation-actions">
+            <a class="button secondary" href="kineworld.bib" download>Download .bib <span aria-hidden="true">↓</span></a>
+            <button class="button primary" id="copy-bibtex" type="button" aria-controls="bibtex-entry" hidden>Copy BibTeX</button>
+          </div>
+        </div>
+        <pre class="citation-code"><code id="bibtex-entry">@misc{song2026kineworld,
+  title  = {{KineWorld}: Action-Induced Transport Fields for Embodied World Modeling},
+  author = {Song, Ziying and Liu, Yuchen and Xu, Zhuoran and Liu, Ziyang and
+            Jin, Jian and Su, Jiangtao and Yu, Haibao and Yang, Lei and Chen, Yuanpei},
+  year   = {2026},
+  url    = {https://modaxiansheng.github.io/KineWorld/}
+}</code></pre>
+        <p id="citation-status" class="citation-status" role="status" aria-live="polite"></p>
       </div>
     </section>
   </main>
