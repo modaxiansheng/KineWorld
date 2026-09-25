@@ -2,21 +2,21 @@
 
 KineWorld is an action-conditioned world model built on the Wan2.2-TI2V-5B video backbone. The code includes an RGB/optical-flow dual-stream generator, an action-prediction module, RoboTwin data preparation and policy integration, and a WorldArena2 Track 1 video-generation pipeline.
 
-[**Project page: method figures and playable videos ↗**](https://pumpkin601.github.io/KineWorld/)
+[**Project page: method figures and playable videos ↗**](https://modaxiansheng.github.io/KineWorld/)
 
 ![KineWorld method overview](docs/assets/kineworld_framework_v4.png)
 
 ## Video samples
 
-Three clips from the provided 1,000-video collection can be played on the [project page](https://pumpkin601.github.io/KineWorld/#videos). Their source checkpoint is not specified here.
+Three clips from the provided 1,000-video collection can be played on the [project page](https://modaxiansheng.github.io/KineWorld/#videos). Their source checkpoint is not specified here.
 
 | Sample 001 | Sample 312 | Sample 1000 |
 | --- | --- | --- |
-| [![Video sample 001](docs/assets/sample_001.png)](https://pumpkin601.github.io/KineWorld/#videos) | [![Video sample 312](docs/assets/sample_312.png)](https://pumpkin601.github.io/KineWorld/#videos) | [![Video sample 1000](docs/assets/sample_1000.png)](https://pumpkin601.github.io/KineWorld/#videos) |
+| [![Video sample 001](docs/assets/sample_001.png)](https://modaxiansheng.github.io/KineWorld/#videos) | [![Video sample 312](docs/assets/sample_312.png)](https://modaxiansheng.github.io/KineWorld/#videos) | [![Video sample 1000](docs/assets/sample_1000.png)](https://modaxiansheng.github.io/KineWorld/#videos) |
 
 ## More manuscript figures
 
-The [project page](https://pumpkin601.github.io/KineWorld/) includes the framework and transport figures, analytical TAWD illustrations, 15 additional single-view rollout pairs, and three multi-view validation plates from the V4 manuscript. The transport-support panel is conceptual; the rollout panels are qualitative examples, not benchmark results.
+The [project page](https://modaxiansheng.github.io/KineWorld/) includes the framework and transport figures, analytical TAWD illustrations, 15 additional single-view rollout pairs, and three multi-view validation plates from the V4 manuscript. The transport-support panel is conceptual; the rollout panels are qualitative examples, not benchmark results.
 
 ![Conceptual KineWorld transport support](docs/assets/transport_illustration.png)
 
