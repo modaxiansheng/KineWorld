@@ -63,7 +63,7 @@ The base video weights are `Wan-AI/Wan2.2-TI2V-5B`; the tokenizer files come fro
 
 ## Model download
 
-**Download links:** [Hugging Face model repository](https://huggingface.co/pumpkin601/KineWorld) · [Direct download: step-500.safetensors (13.11 GB)](https://huggingface.co/pumpkin601/KineWorld/resolve/37e8f86c6c3cf45cde743162bf9b6de583cf1b73/step-500.safetensors?download=true).
+**Model download:** [Hugging Face model repository](https://huggingface.co/pumpkin601/KineWorld).
 
 Run the following Bash commands from the repository root. The released checkpoint is **`step-500.safetensors`** (13.11 GB), not a LoRA adapter or a standalone Diffusers pipeline. Use this repository's loader, rather than `DiffusionPipeline.from_pretrained("pumpkin601/KineWorld")`.
 
