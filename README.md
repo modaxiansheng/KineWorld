@@ -10,11 +10,12 @@ KineWorld is an action-conditioned world model built on the Wan2.2-TI2V-5B video
 
 ## Video samples
 
-Three clips from the provided 1,000-video collection can be played on the [project page](https://modaxiansheng.github.io/KineWorld/#videos). Their source checkpoint is not specified here.
+Animated previews of three clips from the provided 1,000-video collection are shown below. These previews retain the original playback speed at reduced resolution and frame rate (360 × 270, 10 fps). Click an original MP4 link for the full-quality video, or use the players on the [project page](https://modaxiansheng.github.io/KineWorld/#videos). Their source checkpoint is not specified here.
 
 | Sample 001 | Sample 312 | Sample 1000 |
 | --- | --- | --- |
-| [![Video sample 001](docs/assets/sample_001.png)](https://modaxiansheng.github.io/KineWorld/#videos) | [![Video sample 312](docs/assets/sample_312.png)](https://modaxiansheng.github.io/KineWorld/#videos) | [![Video sample 1000](docs/assets/sample_1000.png)](https://modaxiansheng.github.io/KineWorld/#videos) |
+| ![Animated video sample 001](docs/assets/sample_001.gif) | ![Animated video sample 312](docs/assets/sample_312.gif) | ![Animated video sample 1000](docs/assets/sample_1000.gif) |
+| [Original MP4](docs/assets/sample_001.mp4) | [Original MP4](docs/assets/sample_312.mp4) | [Original MP4](docs/assets/sample_1000.mp4) |
 
 ## More manuscript figures
 

@@ -4,6 +4,15 @@
 
 本指南按 **准备环境 → 下载数据和模型 → 生成一条视频 → 准备训练数据 → 继续训练** 的顺序操作。建议先下载一个任务并跑通，再扩展到多个任务。所有命令均在 **Linux Bash** 下运行，除特别说明外，工作目录为 KineWorld 仓库根目录。
 
+## 视频效果展示
+
+以下动图来自已提供的 1,000 条视频集合，保留原始播放速度，以 360 × 270、10 fps 预览。点击下方链接查看原始 MP4，或在[项目主页](https://modaxiansheng.github.io/KineWorld/#videos)播放。现有记录未注明这些视频的来源 checkpoint，不将其标为公开 `step-500` 的复现结果。
+
+| 示例 001 | 示例 312 | 示例 1000 |
+| --- | --- | --- |
+| ![示例 001 动图](docs/assets/sample_001.gif) | ![示例 312 动图](docs/assets/sample_312.gif) | ![示例 1000 动图](docs/assets/sample_1000.gif) |
+| [原始 MP4](docs/assets/sample_001.mp4) | [原始 MP4](docs/assets/sample_312.mp4) | [原始 MP4](docs/assets/sample_1000.mp4) |
+
 ## 先选择你要做什么
 
 | 目标 | 使用入口 | 所需输入 | 输出 |
