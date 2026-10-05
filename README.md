@@ -1,5 +1,7 @@
 # KineWorld
 
+[**中文使用指南：数据准备 → 下载模型 → 单条推理 → 继续训练**](README_zh-CN.md)
+
 KineWorld is an action-conditioned world model built on the Wan2.2-TI2V-5B video backbone. The code includes an RGB/optical-flow dual-stream generator, an action-prediction module, RoboTwin data preparation and policy integration, and a WorldArena2 Track 1 video-generation pipeline.
 
 [**Project page: method figures and playable videos ↗**](https://modaxiansheng.github.io/KineWorld/)
@@ -44,7 +46,7 @@ This repository releases the source components listed below, method figures, and
 | `data_generation/` | Robot-only rendering patch for RoboTwin demonstrations |
 | `configs/` | Public input templates for training and inference |
 
-The local HCU cluster orchestration used for one training run is not part of this source package. `training/train.sh` retains the reference run's data and memory checks; it is not a claim that another dataset or hardware setup reproduces that run.
+The local HCU cluster orchestration used for one training run is not part of this source package. `training/train.sh` retains the reference run's checks under the default `audited` profile. The opt-in `public` profile accepts explicitly prepared local subsets for continued fine-tuning, with device-relative memory checks. Neither profile name is a claim of reproduced paper results.
 
 ## Environment
 
@@ -116,7 +118,7 @@ python track1/infer_track1.py \
   --device cuda:0
 ```
 
-The video is written to `outputs/kineworld-step500-episode1/videos/episode1.mp4` (640 x 480, 24 fps), with a run configuration and per-episode records. **Even for one selected episode, the current adapter requires the complete `episode1` through `episode1000` input layout.** The [guide](docs/checkpoint_usage.md) explains this requirement, output validation, and full-collection generation.
+The video is written to `outputs/kineworld-step500-episode1/videos/episode1.mp4` (640 x 480, 24 fps), with a run configuration and per-episode records. The default `--input-profile official` requires the complete `episode1` through `episode1000` input layout even when selecting one episode. For a single real RoboTwin episode, use `scripts/prepare_inference_episode.py` and `--input-profile custom`, following the [Chinese end-to-end guide](README_zh-CN.md). Custom inputs are not official submission inputs.
 
 Alternatively, replace `--checkpoint-path ...` with these three options to download the checkpoint directly through the inference script. Do not combine the two checkpoint sources:
 
@@ -126,26 +128,25 @@ Alternatively, replace `--checkpoint-path ...` with these three options to downl
 --checkpoint-revision 37e8f86c6c3cf45cde743162bf9b6de583cf1b73
 ```
 
-`--dry-run` checks episode discovery and sharding without loading a checkpoint or running the model. It does not validate action-flow files or generated-video quality. A real smoke test must omit `--dry-run` and inspect the resulting MP4 and records.
+`--dry-run` checks discovery and sharding without loading a checkpoint or running the model. In custom mode it also validates selected images, instructions, and complete action arrays. It does not validate action-flow files or generated-video quality. A real smoke test must omit `--dry-run` and inspect the resulting MP4 and records.
 
 ## RoboTwin action policy
 
 This is a separate, experimental interface that predicts actions, not the action-conditioned video generator above. It needs `action_norm_stats.npz` from the same release. **Do not use the generic `start_server.sh` defaults for step-500:** the published configuration uses head-camera input and `cond_layer_stride=2`, whereas that wrapper uses three cameras and stride 1. See the [explicit step-500 server command and its limitations](docs/checkpoint_usage.md#5-optional-action-policy-server) before using the RoboTwin client in `inference/robotwin_policy/`.
 
-## Training inputs
+## Continued fine-tuning on your data
 
-`training/train.sh` requires an existing RoboTwin training root, a JSONL training manifest and its SHA-256, and a compatible warm-start checkpoint and its SHA-256. These are explicit inputs; the script verifies the manifest and checkpoint before launching. For example:
+Follow the [Chinese dataset and training guide](README_zh-CN.md) for the complete commands, compatible official dataset download, robot-only rendering, train/validation/test split, model dependencies, and troubleshooting. The public route is:
 
-```bash
-DATASET_BASE_PATH=/path/to/robotwin_training \
-TRAINING_MANIFEST=/path/to/train.jsonl \
-TRAINING_MANIFEST_SHA256=YOUR_64_HEX_SHA256 \
-RESUME_CHECKPOINT=/path/to/warm_start.safetensors \
-RESUME_CHECKPOINT_SHA256=YOUR_64_HEX_SHA256 \
-NUM_GPUS=1 bash training/train.sh
-```
+1. Prepare paired legacy ALOHA–AgileX Clean-50 scene/robot-only HDF5 and instructions.
+2. Run `scripts/prepare_robotwin_manifest.py` for explicit tasks and episode ranges. It validates files and writes separate content-pinned manifests.
+3. Source `configs/train_public.example.env`, set the local dataset/manifest paths, and compute the manifest SHA-256. The template selects the released step-500 for weights-only warm-start.
+4. Run `bash training/train.sh --dry-run` for CPU preflight, then `MAX_OPTIMIZER_STEPS=3 SAVE_STEPS=3 bash training/train.sh` for an actual GPU smoke run.
+5. Use a new output directory for a longer run. Full optimizer-state resume is separate from weights-only fine-tuning.
 
-The reference recipe uses head-camera RoboTwin data, 14-dimensional actions, robot-only optical flow, and a VRAM check calibrated for the original 64-GiB accelerator class. Other hardware or data need independent validation. The step-500 weight file is an output of training, not the warm-start input above.
+The template explicitly enables `TRAINING_MANIFEST_PROFILE=public`. Without it, the default `audited` profile retains the historical fixed-manifest and 54–63 GiB checks. Public mode removes that artificial occupancy floor, not the need for sufficient real VRAM. The released checkpoint can initialize further training; it is not an optimizer-state snapshot of its original run.
+
+**Objective scope:** the public clean-flow video path trains a spatially uniform future-RGB objective, not the paper's TAWD weighting. The new entry makes the released implementation usable for continued fine-tuning; it does not add an unverified TAWD implementation or claim manuscript reproduction. CPU tests and data preparation are not completed GPU training.
 
 ## License and provenance
 

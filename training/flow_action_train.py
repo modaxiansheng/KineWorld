@@ -465,6 +465,7 @@ class FlowActionTrainingModule(DiffusionTrainingModule):
         max_timestep_boundary=1.0,
         min_timestep_boundary=0.0,
         resume_checkpoint=None,
+        model_cache_dir=None,
         video_objective="track1_conditional_rgb",
         flow_loss_weight=0.0,
         action_loss_weight=5.0,
@@ -506,6 +507,13 @@ class FlowActionTrainingModule(DiffusionTrainingModule):
             or os.environ.get("KINEWORLD_TOKENIZER_MODEL_ID")
             or "Wan-AI/Wan2.1-T2V-1.3B"
         )
+        if model_cache_dir is not None:
+            for config in model_configs:
+                config.local_model_path = model_cache_dir
+                config.skip_download = True
+            if audio_processor_config is not None:
+                audio_processor_config.local_model_path = model_cache_dir
+                audio_processor_config.skip_download = True
         self.pipe = WanVideoPipeline.from_pretrained(
             torch_dtype=torch.bfloat16, device="cpu",
             model_configs=model_configs,
@@ -513,6 +521,8 @@ class FlowActionTrainingModule(DiffusionTrainingModule):
             tokenizer_config=ModelConfig(
                 model_id=tokenizer_model_id,
                 origin_file_pattern="google/*",
+                local_model_path=model_cache_dir,
+                skip_download=model_cache_dir is not None,
             ),
             # The server snapshot intentionally co-locates DiT/T5/VAE/tokenizer.
             # Honor the explicit model IDs instead of redirecting T5 to Wan2.1.
@@ -655,10 +665,13 @@ class FlowActionTrainingModule(DiffusionTrainingModule):
         warm_start_profile = os.environ.get("KINEWORLD_WARM_START_PROFILE", "custom")
         official_robotwin = warm_start_profile == "robotwin_pretrained"
         official_stage1 = warm_start_profile == "worldarena_stage1"
-        if official_robotwin or official_stage1:
+        public_release = warm_start_profile == "public_step500"
+        if official_robotwin or official_stage1 or public_release:
             coverage_errors = []
             expected_source_counts = (
-                (825, 6, 1191) if official_robotwin else (825, 5, 0)
+                (825, 3, 1191) if public_release else (
+                    (825, 6, 1191) if official_robotwin else (825, 5, 0)
+                )
             )
             actual_source_counts = (
                 len(dit_keys), len(flow_keys), len(action_keys)
@@ -673,12 +686,29 @@ class FlowActionTrainingModule(DiffusionTrainingModule):
                     "DiT missing/unexpected="
                     f"{len(dit_result.missing_keys)}/{len(dit_result.unexpected_keys)}"
                 )
-            if official_robotwin:
-                if flow_result.missing_keys or flow_result.unexpected_keys:
+            if official_robotwin or public_release:
+                # The released conditional-RGB checkpoint omits the frozen,
+                # unused flow prediction head. init_flow_stream still builds
+                # that head from the base DiT; only these exact keys may be
+                # absent, never the clean-flow input embedding or stream ID.
+                expected_missing_flow = set()
+                if public_release:
+                    if self.video_objective != TRACK1_CONDITIONAL_RGB:
+                        coverage_errors.append(
+                            "public step-500 requires track1_conditional_rgb; "
+                            "its omitted flow prediction head cannot warm-start a joint objective"
+                        )
+                    else:
+                        expected_missing_flow = {
+                            f"flow_head.{key}"
+                            for key in self.flow_stream.flow_head.state_dict()
+                        }
+                if set(flow_result.missing_keys) != expected_missing_flow or flow_result.unexpected_keys:
                     coverage_errors.append(
                         "flow missing/unexpected="
-                        f"{len(flow_result.missing_keys)}/"
-                        f"{len(flow_result.unexpected_keys)}"
+                        f"{flow_result.missing_keys}/"
+                        f"{flow_result.unexpected_keys}; "
+                        f"expected missing={sorted(expected_missing_flow)}"
                     )
                 incompatible_action_shapes = len(action_keys) - len(compat)
                 if (
@@ -719,10 +749,15 @@ class FlowActionTrainingModule(DiffusionTrainingModule):
                     "[Resume] Stage1 A/B: flow_stream.stream_embed and the "
                     "entire action expert are intentionally random-initialized"
                 )
+            if public_release:
+                print(
+                    "[Resume] Public step-500: only the unused conditional-flow "
+                    "prediction head is omitted; DiT/flow inputs/action expert loaded exactly"
+                )
         print(
             f"[Resume] loaded dit={len(dit_keys)} flow={len(flow_keys)} "
             f"action(shape-compatible)={len(compat)}/{len(action_keys)}; "
-            f"exact_official_coverage={official_robotwin or official_stage1}"
+            f"exact_official_coverage={official_robotwin or official_stage1 or public_release}"
         )
 
     def _unfreeze_dual_stream_modules(self):
@@ -1322,6 +1357,44 @@ def _save_full_state(
     accelerator.wait_for_everyone()
 
 
+def _validate_vram_policy(profile, min_allocated, min_reserved, maximum):
+    """Resolve profile defaults without torch/device access."""
+    if profile not in {"audited", "public"}:
+        raise ValueError("training_manifest_profile must be audited or public")
+    public = profile == "public"
+    allocated = float((0 if public else FORMAL_MIN_VRAM_GIB) if min_allocated is None else min_allocated)
+    reserved = float((0 if public else FORMAL_MIN_VRAM_GIB) if min_reserved is None else min_reserved)
+    maximum = float((0 if public else FORMAL_MAX_VRAM_GIB) if maximum is None else maximum)
+    if not all(math.isfinite(value) for value in (allocated, reserved, maximum)):
+        raise ValueError("VRAM gates must be finite numbers")
+    if public:
+        if min(allocated, reserved, maximum) < 0 or (maximum and max(allocated, reserved) > maximum):
+            raise ValueError("public VRAM gates must be non-negative; floors cannot exceed a configured cap")
+    else:
+        if allocated < FORMAL_MIN_VRAM_GIB:
+            raise ValueError("min_allocated_gib is a hard gate and must be >= 54 GiB")
+        if reserved < FORMAL_MIN_VRAM_GIB:
+            raise ValueError("min_vram_gib is a hard gate and must be >= 54 GiB")
+        if not reserved <= maximum <= FORMAL_MAX_VRAM_GIB:
+            raise ValueError("max_vram_gib is a hard safety ceiling and must satisfy min_vram_gib <= max_vram_gib <= 63 GiB")
+    return allocated, reserved, maximum
+
+
+def _public_device_vram_cap(configured_cap, device_total_gib):
+    if not math.isfinite(device_total_gib) or device_total_gib <= 0:
+        raise ValueError("public VRAM gate requires a finite positive device total")
+    safety_cap = device_total_gib * 0.95
+    return min(configured_cap, safety_cap) if configured_cap else safety_cap
+
+
+def _vram_measurements_pass(values, min_allocated, min_reserved, maximum, profile):
+    allocated, reserved, peak_allocated, peak_reserved = values
+    if profile == "public" and not all(math.isfinite(x) and x > 0 for x in values):
+        return False
+    return (allocated >= min_allocated and reserved >= min_reserved
+            and reserved <= maximum and peak_reserved <= maximum)
+
+
 def _capture_vram_probe(
     accelerator,
     output_path: str,
@@ -1329,6 +1402,7 @@ def _capture_vram_probe(
     min_allocated_gib: float,
     min_reserved_gib: float,
     max_vram_gib: float = FORMAL_MAX_VRAM_GIB,
+    training_manifest_profile: str = "audited",
 ) -> dict:
     """Record per-process CUDA/HCU memory and enforce world-wide gates.
 
@@ -1347,7 +1421,12 @@ def _capture_vram_probe(
     device_index = torch.cuda.current_device()
     torch.cuda.synchronize(device_index)
     gib = float(2 ** 30)
+    if training_manifest_profile == "public":
+        max_vram_gib = _public_device_vram_cap(
+            max_vram_gib, torch.cuda.get_device_properties(device_index).total_memory / gib,
+        )
     record = {
+        "training_manifest_profile": training_manifest_profile,
         "optimizer_step": int(optimizer_step),
         "rank": int(accelerator.process_index),
         "local_rank": int(accelerator.local_process_index),
@@ -1380,7 +1459,11 @@ def _capture_vram_probe(
         allocated_lower_passed and reserved_lower_passed
     )
     record["upper_bound_passed"] = upper_passed
-    record["passed"] = record["lower_bound_passed"] and upper_passed
+    record["passed"] = _vram_measurements_pass(
+        [record[name] for name in ("memory_allocated_gib", "memory_reserved_gib",
+                                  "max_memory_allocated_gib", "max_memory_reserved_gib")],
+        min_allocated_gib, min_reserved_gib, max_vram_gib, training_manifest_profile,
+    )
 
     probe_dir = os.path.join(
         output_path, "vram_probe", f"optimizer_step_{optimizer_step:08d}"
@@ -1402,25 +1485,25 @@ def _capture_vram_probe(
             record["memory_reserved_gib"],
             record["max_memory_allocated_gib"],
             record["max_memory_reserved_gib"],
+            record["maximum_allowed_reserved_gib"],
         ],
         dtype=torch.float32,
         device=accelerator.device,
     )
-    gathered = accelerator.gather(local_memory).reshape(-1, 4).float().cpu()
+    gathered = accelerator.gather(local_memory).reshape(-1, 5).float().cpu()
     allocated_by_rank = gathered[:, 0].tolist()
     reserved_by_rank = gathered[:, 1].tolist()
     max_allocated_by_rank = gathered[:, 2].tolist()
     max_reserved_by_rank = gathered[:, 3].tolist()
+    caps_by_rank = gathered[:, 4].tolist()
     failing_ranks = [
         rank
-        for rank, (allocated, reserved, max_reserved) in enumerate(
-            zip(allocated_by_rank, reserved_by_rank, max_reserved_by_rank)
+        for rank, (allocated, reserved, max_allocated, max_reserved, cap) in enumerate(
+            zip(allocated_by_rank, reserved_by_rank, max_allocated_by_rank, max_reserved_by_rank, caps_by_rank)
         )
-        if (
-            allocated < float(min_allocated_gib)
-            or reserved < float(min_reserved_gib)
-            or reserved > float(max_vram_gib)
-            or max_reserved > float(max_vram_gib)
+        if not _vram_measurements_pass(
+            (allocated, reserved, max_allocated, max_reserved),
+            min_allocated_gib, min_reserved_gib, cap, training_manifest_profile,
         )
     ]
 
@@ -1428,6 +1511,7 @@ def _capture_vram_probe(
     if accelerator.is_main_process:
         summary = {
             "optimizer_step": int(optimizer_step),
+            "training_manifest_profile": training_manifest_profile,
             "world_size": int(accelerator.num_processes),
             "minimum_required_allocated_gib": float(min_allocated_gib),
             "minimum_required_reserved_gib": float(min_reserved_gib),
@@ -1441,6 +1525,7 @@ def _capture_vram_probe(
                     "memory_reserved_gib": reserved_by_rank[rank],
                     "max_memory_allocated_gib": max_allocated_by_rank[rank],
                     "max_memory_reserved_gib": max_reserved_by_rank[rank],
+                    "maximum_allowed_reserved_gib": caps_by_rank[rank],
                     "passed": rank not in failing_ranks,
                 }
                 for rank in range(len(reserved_by_rank))
@@ -1466,7 +1551,8 @@ def _capture_vram_probe(
             + f" and current/peak memory_reserved must be <= "
             f"{float(max_vram_gib):.3f} GiB"
             + f"; allocated={allocated_by_rank}; reserved={reserved_by_rank}; "
-            f"peak_reserved={max_reserved_by_rank}"
+            f"peak_reserved={max_reserved_by_rank}; per_rank_caps={caps_by_rank}"
+            + ("; public measurements must also be finite and strictly positive" if training_manifest_profile == "public" else "")
         )
     return record
 
@@ -1495,32 +1581,17 @@ def launch_training_task(dataset, model, model_logger, start_epoch=0, args=None)
     find_unused = args.find_unused_parameters
     save_every_n_epochs = getattr(args, "save_every_n_epochs", 1)
     vram_probe_step = int(getattr(args, "vram_probe_step", 3))
-    min_allocated_gib = float(
-        getattr(args, "min_allocated_gib", FORMAL_MIN_VRAM_GIB)
-    )
-    min_reserved_gib = float(
-        getattr(args, "min_vram_gib", FORMAL_MIN_VRAM_GIB)
-    )
-    max_vram_gib = float(
-        getattr(args, "max_vram_gib", FORMAL_MAX_VRAM_GIB)
+    training_manifest_profile = getattr(args, "training_manifest_profile", "audited")
+    min_allocated_gib, min_reserved_gib, max_vram_gib = _validate_vram_policy(
+        training_manifest_profile,
+        getattr(args, "min_allocated_gib", None),
+        getattr(args, "min_vram_gib", None),
+        getattr(args, "max_vram_gib", None),
     )
     max_optimizer_steps = int(getattr(args, "max_optimizer_steps", 0))
     stop_after_vram_probe = bool(getattr(args, "stop_after_vram_probe", False))
     if vram_probe_step <= 0:
         raise ValueError("vram_probe_step must be a positive optimizer step")
-    if not all(math.isfinite(value) for value in (
-        min_allocated_gib, min_reserved_gib, max_vram_gib,
-    )):
-        raise ValueError("VRAM gates must be finite numbers")
-    if min_allocated_gib < FORMAL_MIN_VRAM_GIB:
-        raise ValueError("min_allocated_gib is a hard gate and must be >= 54 GiB")
-    if min_reserved_gib < FORMAL_MIN_VRAM_GIB:
-        raise ValueError("min_vram_gib is a hard gate and must be >= 54 GiB")
-    if not min_reserved_gib <= max_vram_gib <= FORMAL_MAX_VRAM_GIB:
-        raise ValueError(
-            "max_vram_gib is a hard safety ceiling and must satisfy "
-            "min_vram_gib <= max_vram_gib <= 63 GiB"
-        )
     if max_optimizer_steps < 0:
         raise ValueError("max_optimizer_steps must be non-negative")
 
@@ -1756,6 +1827,7 @@ def launch_training_task(dataset, model, model_logger, start_epoch=0, args=None)
             "dataset_base_path": args.dataset_base_path,
             "training_manifest": args.training_manifest,
             "training_manifest_sha256": args.training_manifest_sha256,
+            "training_manifest_profile": training_manifest_profile,
             "variants": args.variants,
             "cameras": args.cameras,
             "camera_prefix": args.camera_prefix,
@@ -1840,6 +1912,7 @@ def launch_training_task(dataset, model, model_logger, start_epoch=0, args=None)
                         min_allocated_gib=min_allocated_gib,
                         min_reserved_gib=min_reserved_gib,
                         max_vram_gib=max_vram_gib,
+                        training_manifest_profile=training_manifest_profile,
                     )
                     vram_probe_complete = True
                 optimizer.step()
@@ -1938,10 +2011,18 @@ def _build_parser():
     parser.add_argument("--variants", type=str, nargs="+",
                         default=["aloha-agilex_clean_50"])
     parser.add_argument(
+        "--training_manifest_profile", choices=["audited", "public"], default="audited",
+        help="audited preserves historical manifest/VRAM gates; public is opt-in further fine-tuning.",
+    )
+    parser.add_argument(
+        "--model_cache_dir", type=str, default=None,
+        help="Absolute local model-cache root; when set, no implicit model downloads are attempted.",
+    )
+    parser.add_argument(
         "--training_manifest",
         type=str,
         required=True,
-        help="Audited JSONL episode allowlist; extracted trees are never globbed.",
+        help="SHA-verified JSONL episode allowlist; extracted trees are never globbed.",
     )
     parser.add_argument(
         "--training_manifest_sha256",
@@ -2093,17 +2174,17 @@ def _build_parser():
               "steps after the restored step."),
     )
     parser.add_argument(
-        "--min_allocated_gib", type=float, default=FORMAL_MIN_VRAM_GIB,
+        "--min_allocated_gib", type=float, default=None,
         help="Fail unless current torch.cuda.memory_allocated is at least this many GiB on every rank.",
     )
     parser.add_argument(
-        "--min_vram_gib", type=float, default=FORMAL_MIN_VRAM_GIB,
+        "--min_vram_gib", type=float, default=None,
         help="Fail unless current torch.cuda.memory_reserved is at least this many GiB on every rank.",
     )
     parser.add_argument(
-        "--max_vram_gib", type=float, default=FORMAL_MAX_VRAM_GIB,
-        help=("Hard safety ceiling for current and peak memory_reserved on "
-              "every rank; must not exceed 63 GiB."),
+        "--max_vram_gib", type=float, default=None,
+        help=("Audited defaults to <=63 GiB. Public: 0/default uses 95%% of each "
+              "device total; a positive value sets a tighter GiB safety cap."),
     )
     parser.add_argument(
         "--max_optimizer_steps", type=int, default=0,
@@ -2135,6 +2216,9 @@ if __name__ == "__main__":
             "variants": sorted(args.variants),
             "task_names": sorted(args.task_names or []),
         }
+        # Preserve existing audited sentinels; public statistics cannot reuse one.
+        if args.training_manifest_profile == "public":
+            identity["training_manifest_profile"] = "public"
 
         def _atomic_json(path, payload):
             os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
@@ -2161,6 +2245,7 @@ if __name__ == "__main__":
                         args.task_names,
                         training_manifest_path=args.training_manifest,
                         training_manifest_sha256=args.training_manifest_sha256,
+                        training_manifest_profile=args.training_manifest_profile,
                     )
                     os.makedirs(
                         os.path.dirname(args.action_norm_path) or ".", exist_ok=True
@@ -2243,6 +2328,7 @@ if __name__ == "__main__":
         action_norm_path=args.action_norm_path,
         training_manifest_path=args.training_manifest,
         training_manifest_sha256=args.training_manifest_sha256,
+        training_manifest_profile=args.training_manifest_profile,
         load_from_cache=args.load_from_cache,
         cache_root=args.cache_root,
         cache_episode_lru_size=args.cache_episode_lru_size,
@@ -2264,6 +2350,7 @@ if __name__ == "__main__":
         max_timestep_boundary=args.max_timestep_boundary,
         min_timestep_boundary=args.min_timestep_boundary,
         resume_checkpoint=args.resume_checkpoint,
+        model_cache_dir=args.model_cache_dir,
         video_objective=args.video_objective,
         flow_loss_weight=args.flow_loss_weight,
         action_loss_weight=args.action_loss_weight,
@@ -2288,7 +2375,10 @@ if __name__ == "__main__":
         proprio_mode=args.proprio_mode,
         loss_timestep_weighting=(args.loss_timestep_weighting == "on"),
     )
-    start_epoch = parse_start_epoch(args.resume_checkpoint)
+    # A weights-only public warm-start is a NEW fine-tuning run, regardless of
+    # whether its filename happens to contain an old epoch number. Exact state
+    # resumes are restored and validated by the unchanged resume contract.
+    start_epoch = 0 if args.training_manifest_profile == "public" else parse_start_epoch(args.resume_checkpoint)
     model_logger = ModelLogger(
         args.output_path,
         remove_prefix_in_ckpt=args.remove_prefix_in_ckpt,

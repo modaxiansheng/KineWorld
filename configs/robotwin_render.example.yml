@@ -1,0 +1,5 @@
+# Copy to RoboTwin/task_config/aloha-agilex_clean_50.yml.
+# Set the actual absolute KineWorld data/robotwin directory on your machine.
+# Shell variables are NOT expanded by yaml.safe_load.
+save_path: /absolute/path/to/KineWorld/data/robotwin
+embodiment: [aloha-agilex]

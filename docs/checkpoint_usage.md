@@ -2,6 +2,8 @@
 
 This guide uses [`pumpkin601/KineWorld`](https://huggingface.co/pumpkin601/KineWorld), revision `37e8f86c6c3cf45cde743162bf9b6de583cf1b73`, and its `step-500.safetensors` file. Commands use Bash on Linux and run from the KineWorld repository root.
 
+For a complete Chinese walkthrough covering a downloadable RoboTwin task, custom single-episode inputs, model download, inference, and continued training, see [中文使用指南](../README_zh-CN.md).
+
 For action-conditioned **video generation**, use `track1/infer_track1.py`. The **action-policy server** is a different interface, discussed separately below. The checkpoint is not a complete Diffusers repository and cannot be loaded through a generic `DiffusionPipeline.from_pretrained` call.
 
 ## 1. Install and download
@@ -33,7 +35,7 @@ For offline use, complete all model/tokenizer downloads and prepare the action-f
 
 ## 2. Prepare the inputs
 
-The current public video adapter expects the WorldArena2 Track 1 layout:
+The default `--input-profile official` expects the complete WorldArena2 Track 1 layout:
 
 ```text
 dataset_track1/
@@ -44,9 +46,9 @@ dataset_track1/
 
 Each instruction JSON contains an `instruction` string. Each HDF5 contains `/joint_action/vector` with shape `[N, 14]`. The PNG is the initial observation. Obtain this input collection separately; the released 1,000-video archive contains generated outputs and is **not** a substitute for these inputs. Keep the original instruction text: the video adapter encodes it verbatim and does not add the training dataset's Track 1 prompt prefix. Custom short prompts are therefore not automatically equivalent to the training prompt format.
 
-The adapter checks the complete set of 1,000 input filenames before selecting an episode range. Thus, `--episode-start 1 --episode-end 1` limits generation but does not enable a one-file input collection. Custom datasets need an adapter to this input contract, not just a different checkpoint path.
+Official mode checks the complete set of 1,000 input filenames before selecting an episode range. Thus, in official mode `--episode-start 1 --episode-end 1` limits generation but does not enable a one-file input collection. Custom mode is explicit: use `scripts/prepare_inference_episode.py --hdf5 RAW --instruction-json JSON --output-root INPUT --episode-id 1`, then add `--input-profile custom` to inference and select `--episode-start 1 --episode-end 1`. It validates real input contents and binds generated records to input hashes. It is not an official submission adapter for arbitrary datasets.
 
-Prepare transport conditions for the same episodes using robot-only rendering and RAFT. A compatible RoboTwin asset checkout, SAPIEN/Vulkan runtime, and RAFT weights are required:
+Prepare transport conditions for the same episodes using robot-only rendering and RAFT. A compatible RoboTwin asset checkout, SAPIEN/Vulkan runtime, and locally staged RAFT weights are required. See the [Chinese guide](../README_zh-CN.md) for the pinned asset checkout and exact RAFT download and verification commands:
 
 ```bash
 python track1/precompute_action_flow.py \
@@ -139,7 +141,7 @@ The 320 x 240 source images are aligned internally to a 320 x 256 model grid. Th
 | --- | --- |
 | `No such file` for the checkpoint | Run from the repository root or pass an absolute checkpoint path; verify `SHA256SUMS` |
 | Base model/tokenizer download starts unexpectedly | Preserve `models/Wan-AI/<model-name>/`; provide all DiT shards and tokenizer files |
-| `episode set mismatch` | Supply the complete official input layout, even when generating only one episode |
+| `episode set mismatch` | Supply all official inputs, or explicitly use `--input-profile custom` for a prepared local subset |
 | Missing or mismatched action-flow manifest | Run the preprocessor for the selected episode range and the exact same input trajectories |
 | CUDA out of memory | Use a suitable GPU, available host RAM, and one inference process per device; checkpoint disk size is not a VRAM requirement |
 | Action server behaves differently from video inference | These are different samplers; check the action-policy scope above |

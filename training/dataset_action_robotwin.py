@@ -143,8 +143,14 @@ def _sha256_file(path: str) -> str:
 def load_track1_training_manifest(
     manifest_path: str,
     expected_sha256: str = TRACK1_FINAL_TRAIN_MANIFEST_SHA256,
+    training_manifest_profile: str = "audited",
 ) -> List[Dict]:
-    """Load and strictly validate the 2,000-episode final-train allowlist."""
+    """Load a fixed audited allowlist or an explicitly pinned public subset."""
+    if training_manifest_profile == "public":
+        from public_manifest import load_public_training_manifest
+        return load_public_training_manifest(manifest_path, expected_sha256)
+    if training_manifest_profile != "audited":
+        raise ValueError(f"unknown training_manifest_profile: {training_manifest_profile!r}")
     if not manifest_path:
         raise ValueError(
             "training_manifest_path is required; the extracted RoboTwin tree "
@@ -365,10 +371,9 @@ def compute_global_action_norm_stats(
     task_names: Optional[List[str]] = None,
     training_manifest_path: Optional[str] = None,
     training_manifest_sha256: str = TRACK1_FINAL_TRAIN_MANIFEST_SHA256,
+    training_manifest_profile: str = "audited",
 ) -> ActionNormStats:
-    """Compute qpos statistics from the audited final-train allowlist only."""
-    if task_names is None or len(task_names) == 0:
-        task_names = ROBOTWIN_ALL_TASKS
+    """Compute qpos statistics only from the explicitly selected manifest."""
     variants_list = _normalize_variants(variants)
     if variants_list != [TRACK1_TRAIN_VARIANT]:
         raise ValueError(
@@ -376,8 +381,14 @@ def compute_global_action_norm_stats(
             f"requested variants={variants_list}"
         )
     manifest_rows = load_track1_training_manifest(
-        training_manifest_path, training_manifest_sha256
+        training_manifest_path, training_manifest_sha256, training_manifest_profile
     )
+    if training_manifest_profile == "public":
+        from public_manifest import select_public_training_tasks, validate_public_manifest_files
+        task_names = select_public_training_tasks(manifest_rows, task_names)
+        validate_public_manifest_files(data_root, manifest_rows)
+    elif task_names is None or len(task_names) == 0:
+        task_names = ROBOTWIN_ALL_TASKS
 
     task_names_sorted = sorted(task_names)
     requested_tasks = set(task_names_sorted)
@@ -391,7 +402,8 @@ def compute_global_action_norm_stats(
             )
         all_episode_paths.append(hdf5_path)
     total_episodes = len(all_episode_paths)
-    expected_episodes = 40 * len(requested_tasks)
+    expected_episodes = (len(manifest_rows) if training_manifest_profile == "public"
+                         else 40 * len(requested_tasks))
     if total_episodes != expected_episodes:
         raise ValueError(
             f"manifest selected {total_episodes} episodes, expected "
@@ -399,7 +411,7 @@ def compute_global_action_norm_stats(
         )
 
     print(
-        f"[ActionNorm] Reading audited manifest allowlist: {total_episodes} "
+        f"[ActionNorm] Reading {training_manifest_profile} manifest allowlist: {total_episodes} "
         f"episodes across {len(requested_tasks)} tasks; sha256="
         f"{training_manifest_sha256}"
     )
@@ -441,9 +453,18 @@ def compute_global_action_norm_stats(
         )
 
     all_qpos = np.concatenate(all_qpos, axis=0)
+    action_std = all_qpos.std(axis=0).astype(np.float32)
+    if training_manifest_profile == "public":
+        # A small, explicitly selected subset can legitimately keep a joint or
+        # gripper fixed. Preserve audited normalization exactly; for public
+        # subsets retain those dimensions and use a documented epsilon floor.
+        constant_dims = np.flatnonzero(action_std < 1e-6).tolist()
+        if constant_dims:
+            print(f"[ActionNorm] Public subset std floor=1e-6 for dimensions {constant_dims}")
+        action_std = np.maximum(action_std, np.float32(1e-6))
     stats = ActionNormStats(
         mean=all_qpos.mean(axis=0).astype(np.float32),
-        std=all_qpos.std(axis=0).astype(np.float32),
+        std=action_std,
         training_manifest_sha256=training_manifest_sha256,
     )
     print(f"[ActionNorm] Computed global z-score stats from "
@@ -536,6 +557,7 @@ class RoboTwinActionFlowDataset:
         load_from_cache: bool = False,
         cache_root: Optional[str] = None,
         cache_episode_lru_size: int = 0,
+        training_manifest_profile: str = "audited",
     ):
         self.data_root = data_root
         self.variants = _normalize_variants(variants)
@@ -546,14 +568,19 @@ class RoboTwinActionFlowDataset:
             )
         self.training_manifest_path = training_manifest_path
         self.training_manifest_sha256 = training_manifest_sha256
+        self.training_manifest_profile = training_manifest_profile
         self.training_manifest_rows = load_track1_training_manifest(
-            training_manifest_path, training_manifest_sha256
+            training_manifest_path, training_manifest_sha256, training_manifest_profile
         )
         self._manifest_rows_by_episode = {
             (str(row["task"]), f"episode{int(row['episode_index'])}"): row
             for row in self.training_manifest_rows
         }
         self.cameras = cameras or ["head_camera", "left_camera", "right_camera"]
+        if self.training_manifest_profile == "public":
+            from public_manifest import select_public_training_tasks, validate_public_manifest_files
+            task_names = select_public_training_tasks(self.training_manifest_rows, task_names)
+            validate_public_manifest_files(data_root, self.training_manifest_rows, self.cameras)
         self.num_cameras = len(self.cameras)
         self.flow_cameras = flow_cameras or [self.cameras[0]]
         self.flow_camera_set = set(self.flow_cameras)
@@ -604,7 +631,9 @@ class RoboTwinActionFlowDataset:
 
         if task_names is None or len(task_names) == 0:
             task_names = ROBOTWIN_ALL_TASKS
-        unknown_tasks = sorted(set(task_names) - set(ROBOTWIN_ALL_TASKS))
+        allowed_tasks = (set(row["task"] for row in self.training_manifest_rows)
+                         if self.training_manifest_profile == "public" else set(ROBOTWIN_ALL_TASKS))
+        unknown_tasks = sorted(set(task_names) - allowed_tasks)
         if unknown_tasks:
             raise ValueError(
                 f"requested tasks are absent from the audited manifest: {unknown_tasks}"
@@ -653,6 +682,7 @@ class RoboTwinActionFlowDataset:
                 task_names,
                 training_manifest_path=self.training_manifest_path,
                 training_manifest_sha256=self.training_manifest_sha256,
+                training_manifest_profile=self.training_manifest_profile,
             )
             if action_norm_path is not None:
                 os.makedirs(os.path.dirname(action_norm_path) or ".", exist_ok=True)
@@ -1188,6 +1218,8 @@ class RoboTwinActionFlowDataset:
             info = self._cached_chunks[idx]
             return self._load_chunk_from_cache(idx)
         except Exception as exc:
+            if self.training_manifest_profile == "public":
+                raise RuntimeError(f"public training never skips malformed cached item {idx}") from exc
             self._warn_cache_skip(idx, info, exc)
             return {
                 "__skip__": True,

@@ -1,5 +1,7 @@
 # KineWorld · WorldArena2 Track 1
 
+第一次使用请先看 [中文完整指南](../README_zh-CN.md)，其中包含真实 RoboTwin 单任务下载、模型下载、单条输入准备、推理与训练。
+
 此目录实现动作条件视频推理：读取每条 HDF5 轨迹的 14 维动作和目标帧数，逐段生成 9 个关键帧，按 `visual_stride=4` 扩展到原始时间轴，并生成规定帧数的 H.264 视频。默认 `action_flow` 模式要求逐段提供真实动作光流；`zero_flow` 只作为显式选择的文本条件基线。
 
 ## 预计算动作光流
@@ -23,7 +25,7 @@ python track1/precompute_action_flow.py \
 
 使用公开的 [KineWorld step-500 权重](https://huggingface.co/pumpkin601/KineWorld)。请先按照主 README 的 [Model download](../README.md#model-download) 下载权重和 Wan 基础模型。完整的输入格式、单条试运行和常见问题见 [checkpoint 使用说明](../docs/checkpoint_usage.md)。
 
-从仓库根目录运行。先只生成 episode1，确认输出后再扩展到 1--1000；当前适配器在选择 episode 前仍会检查完整的 1,000 条输入文件布局。
+从仓库根目录运行。先只生成 episode1，确认输出后再扩展到 1--1000；默认 `--input-profile official` 在选择 episode 前仍检查完整的 1,000 条输入。自己的单条数据请用 `scripts/prepare_inference_episode.py` 准备，并给推理命令增加 `--input-profile custom`，无需凑齐 1,000 条。
 
 ```bash
 python track1/infer_track1.py \
@@ -41,7 +43,7 @@ python track1/infer_track1.py \
 
 也可以把 `--checkpoint-path ...` 替换为 `--checkpoint-repo pumpkin601/KineWorld --checkpoint-file step-500.safetensors --checkpoint-revision 37e8f86c6c3cf45cde743162bf9b6de583cf1b73`，由脚本自动下载。两种权重来源不能同时指定。视频推理不需要 `action_norm_stats.npz`，该文件仅用于动作策略入口。
 
-可以用 `--dry-run` 检查 episode 发现与分片，且不会加载模型或校验动作光流文件；真实推理时不要加此参数。
+可以用 `--dry-run` 检查 episode 发现与分片；custom 模式还会校验所选图像、指令和完整动作数组。它不会加载模型或校验动作光流文件；真实推理时不要加此参数。
 
 ## 输出校验
 

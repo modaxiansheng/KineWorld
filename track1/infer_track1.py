@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Generate WorldArena2 Track-1 videos with KineWorld Stage-1.
 
-The adapter discovers the complete official episode1..1000 layout, reads each
+By default the adapter discovers the complete official episode1..1000 layout.
+Explicit ``--input-profile custom`` accepts a selected subset in the same
+directory layout without treating it as an official submission. It reads each
 episode's frame count from ``/joint_action/vector``, rolls out as many
 autoregressive 9-keyframe chunks as needed at visual_stride=4, pins the
 official PNG as frame zero, and writes atomic H.264 MP4 files at 640x480/24 fps.
@@ -101,7 +103,7 @@ def environment_int(name: str, default: int) -> int:
         raise ValueError(f"{name} must be an integer, got {value!r}") from error
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     local_rank = environment_int("LOCAL_RANK", 0)
     parser = argparse.ArgumentParser(
         description="KineWorld Stage-1 offline generator for WorldArena2 Track-1"
@@ -111,6 +113,15 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help="directory containing data/, first_frame/, instructions/ (or its parent)",
+    )
+    parser.add_argument(
+        "--input-profile",
+        choices=("official", "custom"),
+        default="official",
+        help=(
+            "official requires the complete episode1..1000 input set; custom "
+            "requires only --episode-start..--episode-end, with real HDF5 actions"
+        ),
     )
     parser.add_argument(
         "--output-root",
@@ -216,14 +227,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="validate dataset discovery and shard assignment without loading a model",
+        help=(
+            "validate dataset discovery and shard assignment without loading a model; "
+            "custom also validates selected images, instructions and actions"
+        ),
     )
     parser.add_argument(
         "--log-level",
         choices=("DEBUG", "INFO", "WARNING", "ERROR"),
         default="INFO",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def validate_args(args: argparse.Namespace) -> None:
@@ -251,6 +265,8 @@ def validate_args(args: argparse.Namespace) -> None:
         raise ValueError("--shard-index must satisfy 0 <= index < num-shards")
     if args.default_frame_count is not None and args.default_frame_count < 2:
         raise ValueError("--default-frame-count must be at least 2")
+    if args.input_profile == "custom" and args.default_frame_count is not None:
+        raise ValueError("custom inputs require real HDF5 actions; no frame-count fallback")
     try:
         provider_kwargs = json.loads(args.action_flow_provider_kwargs)
     except json.JSONDecodeError as error:
@@ -301,8 +317,19 @@ def resolve_dataset_root(path: Path) -> Path:
 
 
 def discover_episodes(
-    dataset_root: Path, *, allow_missing_hdf5: bool = False
+    dataset_root: Path,
+    *,
+    allow_missing_hdf5: bool = False,
+    input_profile: str = "official",
+    episode_start: int = 1,
+    episode_end: int = EXPECTED_EPISODES,
 ) -> list[EpisodeFiles]:
+    if input_profile not in ("official", "custom"):
+        raise ValueError(f"unknown input profile: {input_profile}")
+    if not 1 <= episode_start <= episode_end <= EXPECTED_EPISODES:
+        raise ValueError("episode range must stay within 1..1000")
+    if input_profile == "custom" and allow_missing_hdf5:
+        raise ValueError("custom inputs require real HDF5 actions")
     directories = {
         "hdf5": dataset_root / "data" / TASK_DIRECTORY,
         "png": dataset_root / "first_frame" / TASK_DIRECTORY,
@@ -324,13 +351,20 @@ def discover_episodes(
             mapping[episode_id] = path.resolve()
         by_kind[kind] = mapping
 
-    expected_ids = set(range(1, EXPECTED_EPISODES + 1))
+    expected_ids = (
+        set(range(1, EXPECTED_EPISODES + 1))
+        if input_profile == "official"
+        else set(range(episode_start, episode_end + 1))
+    )
     for kind, mapping in by_kind.items():
         actual_ids = set(mapping)
         missing = sorted(expected_ids - actual_ids)
         extra = sorted(actual_ids - expected_ids)
         mismatch_is_allowed = kind == "hdf5" and allow_missing_hdf5 and not extra
-        if actual_ids != expected_ids and not mismatch_is_allowed:
+        mismatch = (
+            actual_ids != expected_ids if input_profile == "official" else bool(missing)
+        )
+        if mismatch and not mismatch_is_allowed:
             raise ValueError(
                 f"{kind} episode set mismatch: "
                 f"missing={missing[:20]}, extra={extra[:20]}"
@@ -344,7 +378,7 @@ def discover_episodes(
             png=by_kind["png"][episode_id],
             instruction=by_kind["instruction"][episode_id],
         )
-        for episode_id in range(1, EXPECTED_EPISODES + 1)
+        for episode_id in sorted(expected_ids)
     ]
 
 
@@ -356,11 +390,27 @@ def load_instruction(path: Path) -> str:
     return instruction.strip()
 
 
+def custom_input_fingerprint(episodes: Sequence[EpisodeFiles]) -> str:
+    """Bind custom resume decisions to real input bytes, across all shards."""
+    records = []
+    for episode in episodes:
+        if episode.hdf5 is None:
+            raise ValueError("custom input fingerprint requires real HDF5 actions")
+        records.append({
+            "episode_id": episode.episode_id,
+            "hdf5_sha256": sha256_file(episode.hdf5),
+            "png_sha256": sha256_file(episode.png),
+            "instruction_sha256": sha256_file(episode.instruction),
+        })
+    return canonical_signature({"episodes": sorted(records, key=lambda item: item["episode_id"])})
+
+
 def source_trajectory_frame_count(
     path: Path | None,
     *,
     default_frame_count: int | None,
     require_action_14d: bool,
+    validate_action_values: bool = False,
 ) -> tuple[int, str]:
     if path is None:
         if default_frame_count is None:
@@ -378,7 +428,7 @@ def source_trajectory_frame_count(
         dataset = handle[key]
         if not dataset.shape:
             raise ValueError(f"/{key} must have a frame dimension in {path}")
-        if require_action_14d and (
+        if (require_action_14d or validate_action_values) and (
             len(dataset.shape) != 2 or int(dataset.shape[1]) != 14
         ):
             raise ValueError(
@@ -388,6 +438,17 @@ def source_trajectory_frame_count(
         frame_count = int(dataset.shape[0])
         if frame_count < 2:
             raise ValueError(f"invalid /{key} frame count {frame_count} in {path}")
+        if validate_action_values:
+            import numpy as np
+
+            if dataset.dtype.kind not in "fiu":
+                raise ValueError(f"/{key} must contain numeric joint positions in {path}")
+            for start in range(0, frame_count, 4096):
+                values = np.asarray(dataset[start : start + 4096], dtype=np.float32)
+                if not np.isfinite(values).all():
+                    raise ValueError(f"/{key} contains NaN/Inf in {path}")
+                if ((values[:, (6, 13)] < 0) | (values[:, (6, 13)] > 1)).any():
+                    raise ValueError(f"/{key} gripper columns 6/13 must be in [0,1] in {path}")
         return frame_count, "/joint_action/vector"
 
 
@@ -876,6 +937,9 @@ def main() -> None:
     dataset_root = resolve_dataset_root(args.dataset_root)
     episodes = discover_episodes(
         dataset_root,
+        input_profile=args.input_profile,
+        episode_start=args.episode_start,
+        episode_end=args.episode_end,
         allow_missing_hdf5=(
             args.conditioning_mode == "zero_flow"
             and args.default_frame_count is not None
@@ -891,7 +955,9 @@ def main() -> None:
     assignment = {
         "event": "dataset_discovered",
         "dataset_root": str(dataset_root),
-        "official_episode_count": len(episodes),
+        "input_profile": args.input_profile,
+        "discovered_episode_count": len(episodes),
+        "official_episode_count": len(episodes) if args.input_profile == "official" else None,
         "episode_range": [args.episode_start, args.episode_end],
         "shard": [args.shard_index, args.num_shards],
         "assigned_episode_count": len(selected),
@@ -901,8 +967,8 @@ def main() -> None:
         "default_frame_count": args.default_frame_count,
         "conditioning_mode": args.conditioning_mode,
     }
-    print(json.dumps(assignment, ensure_ascii=False), flush=True)
-    if args.dry_run:
+    if args.dry_run and args.input_profile == "official":
+        print(json.dumps(assignment, ensure_ascii=False), flush=True)
         return
 
     # Fail on missing/invalid official trajectory lengths before downloading
@@ -913,7 +979,20 @@ def main() -> None:
             item.hdf5,
             default_frame_count=args.default_frame_count,
             require_action_14d=args.conditioning_mode == "action_flow",
+            validate_action_values=args.input_profile == "custom",
         )
+        if args.input_profile == "custom":
+            from PIL import Image
+
+            load_instruction(item.instruction)
+            with Image.open(item.png) as image:
+                if image.format != "PNG":
+                    raise ValueError(f"expected a real PNG first frame: {item.png}")
+                image.load()
+    assignment["selected_contents_validated"] = args.input_profile == "custom"
+    print(json.dumps(assignment, ensure_ascii=False), flush=True)
+    if args.dry_run:
+        return
 
     action_conditioner = build_action_conditioner(args)
     action_conditioner_provenance = conditioner_description(action_conditioner)
@@ -929,6 +1008,7 @@ def main() -> None:
     checkpoint_sha256 = sha256_file(checkpoint_path)
     signature_inputs = {
         "adapter_version": ADAPTER_VERSION,
+        "input_profile": args.input_profile,
         "checkpoint_sha256": checkpoint_sha256,
         "base_model_id": args.base_model_id,
         "tokenizer_model_id": args.tokenizer_model_id,
@@ -967,6 +1047,8 @@ def main() -> None:
         "video_crf": args.video_crf,
         "video_preset": args.video_preset,
     }
+    if args.input_profile == "custom":
+        signature_inputs["custom_input_fingerprint"] = custom_input_fingerprint(episodes)
     run_signature = canonical_signature(signature_inputs)
 
     output_root = args.output_root.expanduser().resolve()
@@ -1126,6 +1208,7 @@ def main() -> None:
                 "adapter_version": ADAPTER_VERSION,
                 "episode_id": item.episode_id,
                 "episode_stem": item.stem,
+                "input_profile": args.input_profile,
                 "instruction": instruction,
                 "prompt_policy": "plain_instruction_no_t_shape_prefix",
                 "conditioning_mode": args.conditioning_mode,
@@ -1175,7 +1258,8 @@ def main() -> None:
                     "sigma_shift": args.sigma_shift,
                 },
                 "first_frame": {
-                    "official_png_pinned_before_video_encoding": True,
+                    "official_png_pinned_before_video_encoding": args.input_profile == "official",
+                    "source_png_pinned_before_video_encoding": True,
                     "output_frame_index": 0,
                 },
                 "video": {
